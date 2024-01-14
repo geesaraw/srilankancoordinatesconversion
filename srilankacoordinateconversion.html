@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinate Converter with Leaflet</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/proj4leaflet@1.0.1/dist/proj4leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gdal/3.3.0/gdal.js"></script>
+</head>
+<body>
+    <h1>Coordinate Converter with leaflet maps</h1>
+    <form id="coordinateForm">
+        X Coordinate: <input type="text" id="x_coordinate_input" required><br>
+        Y Coordinate: <input type="text" id="y_coordinate_input" required><br>
+        Input Coordinate System:
+        <select id="input_Coordinate_System">
+            <option value="EPSG:5234">Kandawala Sri Lanka Grid</option>
+            <option value="EPSG:4326">Longitude and Latitude</option>
+            <option value="EPSG:5235">SLD99 Sri Lanka Grid</option>
+        </select><br>
+        Output Coordinate System:
+        <select id="output_Coordinate_System">
+            <option value="EPSG:5234">Kandawala Sri Lanka Grid</option>
+            <option value="EPSG:4326">Longitude and Latitude</option>
+            <option value="EPSG:5235">SLD99 Sri Lanka Grid</option>
+        </select><br>
+        <button type="button" onclick="convertCoordinates()">Convert</button>
+    </form>
+    <p>X Coordinate: <span id="x_coordinate_output"></span></p>
+    <p>Y Coordinate: <span id="y_coordinate_output"></span></p>
+
+    <div id="map" style="height: 400px;"></div>
+
+    <script>
+        const map = L.map('map').setView([7, 80.771711], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    
+        function roundCoordinate(coord) {
+            return Math.round(coord * 1e6) / 1e6;
+        }
+    
+        function convertCoordinates() {
+            const x_coordinate_input = parseFloat(document.getElementById("x_coordinate_input").value);
+            const y_coordinate_input = parseFloat(document.getElementById("y_coordinate_input").value);
+            const input_Coordinate_System = document.getElementById("input_Coordinate_System").value;
+            const output_Coordinate_System = document.getElementById("output_Coordinate_System").value;
+    
+            proj4.defs("EPSG:5234", "+proj=tmerc +lat_0=7.00048027777778 +lon_0=80.7717111111111 +k=0.9999238418 +x_0=200000 +y_0=200000 +ellps=GRS80 +towgs84=-97,787,86,0,0,0,0 +units=m +no_defs");
+            proj4.defs("EPSG:5235", "+proj=tmerc +lat_0=7.00047152777778 +lon_0=79.8765416666667 +k=0.9999238418 +x_0=500000 +y_0=500000 +ellps=GRS80 +towgs84=-0.293,766.95,87.713,-0.195704,-1.695068,-3.473016,-0.039338 +units=m +no_defs");
+            proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
+
+            proj4.defs("EPSG:5233", "+proj=tmerc +lat_0=7.00047152777778 +lon_0=79.8765416666667 +k=0.9999238418 +x_0=500000 +y_0=500000 +ellps=GRS80 +towgs84=-0.293,766.95,87.713,-0.195704,-1.695068,-3.473016,-0.039338 +units=m +no_defs");
+    
+            const convertedCoordinates = proj4(input_Coordinate_System, output_Coordinate_System, [x_coordinate_input, y_coordinate_input]);
+    
+            const roundedCoordinates = convertedCoordinates.map(roundCoordinate);
+    
+            const wgs84Coordinates = proj4(input_Coordinate_System, "EPSG:4326", [x_coordinate_input, y_coordinate_input]);
+
+            const Wgs84CoordinatesRounded = wgs84Coordinates.map(roundCoordinate);
+    
+            document.getElementById("x_coordinate_output").innerText = roundedCoordinates[0];
+            document.getElementById("y_coordinate_output").innerText = roundedCoordinates[1];
+    
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+    
+            const convertedMarker = L.marker([Wgs84CoordinatesRounded[1], Wgs84CoordinatesRounded[0]])
+                .bindPopup(`Converted Coordinates: ${Wgs84CoordinatesRounded[1]}, ${Wgs84CoordinatesRounded[0]}`)
+                .addTo(map);
+    
+            map.setView([Wgs84CoordinatesRounded[1], Wgs84CoordinatesRounded[0]], 12);
+        }
+    </script>
+</body>
+</html>
